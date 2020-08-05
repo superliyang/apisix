@@ -66,16 +66,16 @@ package.path  = pkg_path .. pkg_path_org
 
 do
     -- skip luajit environment
-    local ok = pcall(require, "table.new")
-    if not ok then
-        local ok, json = pcall(require, "cjson")
-        if ok and json then
-            io.stderr:write("please remove the cjson library in Lua, it may "
-                            .. "conflict with the cjson library in openresty. "
-                            .. "\n luarocks remove cjson\n")
-            return
-        end
-    end
+    --local ok = pcall(require, "table.new")
+    --if not ok then
+    --    local ok, json = pcall(require, "cjson")
+    --    if ok and json then
+    --        io.stderr:write("please remove the cjson library in Lua, it may "
+    --                        .. "conflict with the cjson library in openresty. "
+    --                        .. "\n luarocks remove cjson\n")
+    --        return
+    --    end
+    --end
 end
 
 local yaml = require("tinyyaml")
@@ -637,6 +637,12 @@ version:    print the version of apisix
 ]])
 end
 
+--加载配置文件
+--检查openresty版本
+--检查核心配置属性
+--检查操作系统32位、64位
+--解析dns配置，加载dns
+--生成nginx配置
 local function init()
     if is_root_path then
         print('Warning! Running apisix under /root is only suitable for development environments'
@@ -738,6 +744,7 @@ local function init()
 end
 _M.init = init
 
+--初始化etcd配置
 local function init_etcd(show_output)
     -- read_yaml_conf
     local yaml_conf, err = read_yaml_conf()
@@ -811,15 +818,18 @@ local openresty_args = [[openresty  -p ]] .. apisix_home .. [[ -c ]]
 function _M.start(...)
     init(...)
     init_etcd(...)
-
+    --生成命令行
     local cmd = openresty_args
     -- print(cmd)
+    --启动openresty命令
     os.execute(cmd)
 end
 
 function _M.stop()
+    --生成命令行
     local cmd = openresty_args .. [[ -s stop]]
     -- print(cmd)
+    --执行启动openresty命令
     os.execute(cmd)
 end
 

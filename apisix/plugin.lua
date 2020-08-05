@@ -53,26 +53,26 @@ local function sort_plugin(l, r)
     return l.priority > r.priority
 end
 
-
+--加载指定插件，存储到plugins_list集合
 local function load_plugin(name, plugins_list, is_stream_plugin)
     local pkg_name = "apisix.plugins." .. name
     if is_stream_plugin then
         pkg_name = "apisix.stream.plugins." .. name
     end
     pkg_loaded[pkg_name] = nil
-
+    --require加载插件
     local ok, plugin = pcall(require, pkg_name)
     if not ok then
         core.log.error("failed to load plugin [", name, "] err: ", plugin)
         return
     end
-
+    --插件必须有优先级
     if not plugin.priority then
         core.log.error("invalid plugin [", name,
                         "], missing field: priority")
         return
     end
-
+    --必须有version
     if not plugin.version then
         core.log.error("invalid plugin [", name, "] missing field: version")
         return
@@ -80,7 +80,7 @@ local function load_plugin(name, plugins_list, is_stream_plugin)
 
     plugin.name = name
     core.table.insert(plugins_list, plugin)
-
+    --如果plugin有init方法，执行它
     if plugin.init then
         plugin.init()
     end
@@ -88,22 +88,25 @@ local function load_plugin(name, plugins_list, is_stream_plugin)
     return
 end
 
-
+--加载7层插件
 local function load()
     core.table.clear(local_plugins)
     core.table.clear(local_plugins_hash)
 
     local_conf = core.config.local_conf(true)
+    --配置读取可使用的插件列表
     local plugin_names = local_conf.plugins
     if not plugin_names then
         return nil, "failed to read plugin list from local file"
     end
 
+    --启用健康检查插件
     if local_conf.apisix and local_conf.apisix.enable_heartbeat then
         core.table.insert(plugin_names, "heartbeat")
     end
 
     local processed = {}
+    --遍历加载插件
     for _, name in ipairs(plugin_names) do
         if processed[name] == nil then
             processed[name] = true
@@ -172,10 +175,11 @@ local function load_stream()
     return true
 end
 
-
+--加载插件
 function _M.load()
     local_conf = core.config.local_conf(true)
 
+    --7层
     if ngx.config.subsystem == "http" then
         local ok, err = load()
         if not ok then
@@ -183,6 +187,7 @@ function _M.load()
         end
     end
 
+    --4层
     local ok, err = load_stream()
     if not ok then
         core.log.error("failed to load stream plugins: ", err)

@@ -51,7 +51,7 @@ function _M.local_conf(force)
         return config_data
     end
 
-    local yaml_config, err = read_file(local_conf_path)
+    local yaml_config, err = read_file(local_colocal_confnf_path)
     if type(yaml_config) ~= "string" then
         return nil, "failed to read config file:" .. err
     end

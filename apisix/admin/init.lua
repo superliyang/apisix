@@ -279,7 +279,7 @@ local uri_route = {
     },
 }
 
-
+--初始化admin，注册路由、注册事件
 function _M.init_worker()
     local local_conf = core.config.local_conf()
     if not local_conf.apisix or not local_conf.apisix.enable_admin then

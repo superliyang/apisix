@@ -47,6 +47,7 @@ end
 
 
 function _M.http_init_worker()
+    --基于redixtree的查找
     local conf = core.config.local_conf()
     local router_http_name = "radixtree_uri"
     local router_ssl_name = "radixtree_sni"
@@ -55,15 +56,17 @@ function _M.http_init_worker()
         router_http_name = conf.apisix.router.http or router_http_name
         router_ssl_name = conf.apisix.router.ssl or router_ssl_name
     end
-
+    --选择性加载router，host_uri、sni、uri,初始化路由
     local router_http = require("apisix.http.router." .. router_http_name)
     router_http.init_worker(filter)
     _M.router_http = router_http
 
+    --redixtree_sni
     local router_ssl = require("apisix.http.router." .. router_ssl_name)
     router_ssl.init_worker()
     _M.router_ssl = router_ssl
 
+    --全局路由
     local global_rules, err = core.config.new("/global_rules", {
             automatic = true,
             item_schema = core.schema.global_rule

@@ -44,7 +44,7 @@ end
 
 local _M = {version = 0.3}
 
-
+--1. 初始化入口
 function _M.http_init(args)
     require("resty.core")
 
@@ -62,38 +62,52 @@ function _M.http_init(args)
         core.log.warn('failed to get seed from urandom: ', err)
         seed = ngx.now() * 1000 + ngx.worker.pid()
     end
+    --初始化随机数
     math.randomseed(seed)
+    --dns 设置并打印
     parse_args(args)
+    --初始化一个uid，存放在conf的apisix.uid文件中，代表一个节点
     core.id.init()
 end
 
-
+-- 2. 初始化worker
+-- 约定：每个需要咋init_worker阶段初始化的组件，都有一个init_worker方法
 function _M.http_init_worker()
+    --初始化worker event
     local we = require("resty.worker.events")
     local ok, err = we.configure({shm = "worker-events", interval = 0.1})
     if not ok then
         error("failed to init worker event: " .. err)
     end
 
+    --初始化etcd实例用于获取upstream
     require("apisix.balancer").init_worker()
+    --获取run函数，用于路由查找
     load_balancer = require("apisix.balancer").run
+    --初始化admin
     require("apisix.admin.init").init_worker()
 
     router.http_init_worker()
-    require("apisix.http.service").init_worker()
-    plugin.init_worker()
-    require("apisix.consumer").init_worker()
 
+    require("apisix.http.service").init_worker()
+
+    plugin.init_worker()
+
+    require("apisix.consumer").init_worker()
+    --初始化配置
     if core.config == require("apisix.core.config_yaml") then
         core.config.init_worker()
     end
 
     require("apisix.debug").init_worker()
 
+    --加载并解析config.yaml配置
     local local_conf = core.config.local_conf()
+    --dns 有效期，从config.ymal中获取
     local dns_resolver_valid = local_conf and local_conf.apisix and
                         local_conf.apisix.dns_resolver_valid
 
+    --初始化dns cache
     parsed_domain = core.lrucache.new({
         ttl = dns_resolver_valid, count = 512, invalid_stale = true,
     })
