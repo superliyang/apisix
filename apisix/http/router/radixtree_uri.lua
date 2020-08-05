@@ -34,6 +34,7 @@ local _M = {version = 0.2}
 local function create_radixtree_router(routes)
     routes = routes or {}
 
+    --获取插件中扩展的api，添加到路由集合
     local api_routes = plugin.api_routes()
     core.table.clear(uri_routes)
 
@@ -46,7 +47,7 @@ local function create_radixtree_router(routes)
             })
         end
     end
-
+    --将从配置中心获取的路由添加到路由集合，用于创建radixtree查找树
     for _, route in ipairs(routes) do
         if type(route) == "table" then
             local filter_fun, err
@@ -84,6 +85,7 @@ local function create_radixtree_router(routes)
         end
     end
 
+    --使用uri_routes创建radixtree
     core.log.info("route items: ", core.json.delay_encode(uri_routes, true))
     uri_router = router.new(uri_routes)
 end
@@ -128,6 +130,7 @@ end
 
 function _M.init_worker(filter)
     local err
+    --从配置中心获取路由列表（默认etcd）
     user_routes, err = core.config.new("/routes", {
             automatic = true,
             item_schema = core.schema.route,

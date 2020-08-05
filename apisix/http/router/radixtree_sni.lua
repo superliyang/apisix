@@ -31,13 +31,13 @@ local _M = {
     server_name = ngx_ssl.server_name,
 }
 
-
+--创建sni router
 local function create_router(ssl_items)
     local ssl_items = ssl_items or {}
 
     local route_items = core.table.new(#ssl_items, 0)
     local idx = 0
-
+    --证书集合
     for _, ssl in ipairs(ssl_items) do
         if type(ssl) == "table" then
             local sni = ssl.value.sni:reverse()
@@ -55,6 +55,7 @@ local function create_router(ssl_items)
     end
 
     core.log.info("route items: ", core.json.delay_encode(route_items, true))
+    --从证书集合中路由查找，因此使用证书集合创建radixtree
     local router, err = radixtree_new(route_items)
     if not router then
         return nil, err
@@ -95,7 +96,7 @@ local function set_pem_ssl_key(cert, pkey)
     return true
 end
 
-
+--查找并设置证书
 function _M.match_and_set(api_ctx)
     local err
     if not radixtree_router or
@@ -108,11 +109,12 @@ function _M.match_and_set(api_ctx)
     end
 
     local sni
+    --拿到sni，获取证书
     sni, err = ngx_ssl.server_name()
     if type(sni) ~= "string" then
         return false, "failed to fetch SNI: " .. (err or "not found")
     end
-
+    --通过sni获取证书
     core.log.debug("sni: ", sni)
     local ok = radixtree_router:dispatch(sni:reverse(), nil, api_ctx)
     if not ok then
@@ -122,6 +124,7 @@ function _M.match_and_set(api_ctx)
 
     local matched_ssl = api_ctx.matched_ssl
     core.log.info("debug: ", core.json.delay_encode(matched_ssl, true))
+    --设置证书
     ok, err = set_pem_ssl_key(matched_ssl.value.cert, matched_ssl.value.key)
     if not ok then
         return false, err
@@ -133,6 +136,7 @@ end
 
 function _M.init_worker()
     local err
+    --从配置中心获取证书（默认etcd）
     ssl_certificates, err = core.config.new("/ssl", {
                         automatic = true,
                         item_schema = core.schema.ssl

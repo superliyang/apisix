@@ -86,13 +86,13 @@ function _M.http_init_worker()
     load_balancer = require("apisix.balancer").run
     --初始化admin
     require("apisix.admin.init").init_worker()
-
+    --初始化路由查找规则
     router.http_init_worker()
-
+    --初始化service
     require("apisix.http.service").init_worker()
-
+    --初始化插件
     plugin.init_worker()
-
+    --初始化consumer
     require("apisix.consumer").init_worker()
     --初始化配置
     if core.config == require("apisix.core.config_yaml") then
@@ -174,16 +174,17 @@ local function run_plugin(phase, plugins, api_ctx)
     return api_ctx
 end
 
-
+-- 3. 证书配置
 function _M.http_ssl_phase()
     local ngx_ctx = ngx.ctx
     local api_ctx = ngx_ctx.api_ctx
 
+    --创建api上下文
     if api_ctx == nil then
         api_ctx = core.tablepool.fetch("api_ctx", 0, 32)
         ngx_ctx.api_ctx = api_ctx
     end
-
+    --从radixtree_sni.lua match_and_set 查找证书并设置
     local ok, err = router.router_ssl.match_and_set(api_ctx)
     if not ok then
         if err then
@@ -261,7 +262,7 @@ local function parse_domain_in_route(route, ver)
     return route
 end
 
-
+-- 4. access阶段，处理请求
 function _M.http_access_phase()
     local ngx_ctx = ngx.ctx
     local api_ctx = ngx_ctx.api_ctx

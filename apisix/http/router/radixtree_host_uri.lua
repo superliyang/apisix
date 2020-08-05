@@ -133,6 +133,8 @@ end
 
     local match_opts = {}
 function _M.match(api_ctx)
+    --初次加载或数据有变更，重新创建radixtree
+    --conf_version 从0开始，每次变更+1
     if not cached_version or cached_version ~= user_routes.conf_version then
         create_radixtree_router(user_routes.values)
         cached_version = user_routes.conf_version
@@ -144,6 +146,7 @@ function _M.match(api_ctx)
     match_opts.vars = api_ctx.var
     match_opts.host = api_ctx.var.host
 
+    --host匹配
     if host_router then
         local host_uri = api_ctx.var.host
         local ok = host_router:dispatch(host_uri:reverse(), match_opts, api_ctx)
@@ -151,7 +154,7 @@ function _M.match(api_ctx)
             return true
         end
     end
-
+    --路径匹配
     local ok = only_uri_router:dispatch(api_ctx.var.uri, match_opts, api_ctx)
     if ok then
         return true
@@ -173,6 +176,7 @@ end
 
 function _M.init_worker(filter)
     local err
+    --从配置中心获取路由列表（默认etcd）
     user_routes, err = core.config.new("/routes", {
             automatic = true,
             item_schema = core.schema.route,
